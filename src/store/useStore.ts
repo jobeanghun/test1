@@ -19,6 +19,7 @@ export interface KnowledgeDoc {
     content: string;
     filesize: string;
     time: string;
+    timestamp?: number;
 }
 
 export interface ChatMessage {
