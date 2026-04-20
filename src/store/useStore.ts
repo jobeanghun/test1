@@ -72,6 +72,7 @@ interface AppState {
     addAnalysis: (item: AnalysisItem) => void;
     addKnowledgeDoc: (doc: KnowledgeDoc) => void;
     removeKnowledgeDoc: (id: string) => void;
+    clearKnowledgeDocs: () => void;
     addWarRoom: (room: WarRoom) => void;
     removeWarRoom: (id: string) => void;
     setWarRooms: (rooms: WarRoom[]) => void;
@@ -152,6 +153,9 @@ export const useStore = create<AppState>()(
             removeKnowledgeDoc: (id) => set((state) => ({ 
                 knowledgeDocs: state.knowledgeDocs.filter(d => d.id !== id) 
             })),
+            clearKnowledgeDocs: () => set({ 
+                knowledgeDocs: [] 
+            }),
             addWarRoom: (room) => set((state) => ({ 
                 warRooms: [room, ...state.warRooms.filter(r => r.id !== room.id)] 
             })),
