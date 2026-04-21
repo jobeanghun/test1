@@ -8,6 +8,9 @@ const nextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
+  outputFileTracingIncludes: {
+    '/api/**/*': ['./node_modules/pdf-parse/**/*'],
+  },
 };
 
 export default nextConfig;
