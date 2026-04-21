@@ -39,7 +39,8 @@ export default function KnowledgeBasePage() {
                 filename: data.fileName || file.name,
                 time: new Date().toLocaleString(),
                 timestamp: Date.now(), // 정밀 정렬용
-                content: data.textContent || "내용 오류"
+                content: data.textContent || "내용 오류",
+                filesize: `${(file.size / 1024).toFixed(1)} KB`
             });
 
             // 백엔드에서 반환한 실제 Pinecone 처리 결과를 사용자 토스트 알림으로 표시
