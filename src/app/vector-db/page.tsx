@@ -23,26 +23,19 @@ export default function VectorDBPage() {
         return Array.from(docMap.values());
     }, [knowledgeDocs]);
 
-    // 실제 컨텍스트 크기에 비례하는 메모리와 지연율 연산
-    const { totalMemoryStr, memoryPercent, avgLatency } = useMemo(() => {
-        // (한 글자당 평균 3바이트 추정)
-        const textBytes = uniqueDocs.reduce((acc, doc) => acc + (doc.content?.length || 0) * 3, 0); 
-        
-        // 메모리 백분율 (시뮬레이션: 1GB가 100%라고 가정)
-        const percent = Math.min(99, 12 + (textBytes / (1024 * 1024 * 100)) * 100);
+    // 실제 추출된 텍스트 볼륨과 할당된 청크 수 연산
+    const { totalExtractedStr, chunkCount, completionRate } = useMemo(() => {
+        const textLength = uniqueDocs.reduce((acc, doc) => acc + (doc.content?.length || 0), 0);
+        let lenStr = textLength + " 자";
+        if (textLength > 10000) lenStr = (textLength / 10000).toFixed(1) + "만 자";
 
-        let memStr = textBytes + " B";
-        if (textBytes > 1024 * 1024) memStr = (textBytes / (1024 * 1024)).toFixed(2) + " MB";
-        else if (textBytes > 1024) memStr = (textBytes / 1024).toFixed(1) + " KB";
-        if (textBytes === 0) memStr = "0 KB";
-
-        // 문서 수와 바이트에 비례하는 검색 지연 (기본 32ms)
-        const latency = 32 + (uniqueDocs.length * 5) + (textBytes / 500000);
+        const totalChunks = uniqueDocs.reduce((acc, doc) => acc + Math.max(1, Math.ceil((doc.content?.length || 0) / 1000)), 0);
+        const rate = uniqueDocs.length > 0 ? 100 : 0;
 
         return { 
-            totalMemoryStr: memStr, 
-            memoryPercent: percent,
-            avgLatency: textBytes === 0 ? "0" : latency.toFixed(1) 
+            totalExtractedStr: lenStr, 
+            chunkCount: totalChunks,
+            completionRate: rate 
         };
     }, [uniqueDocs]);
 
@@ -175,20 +168,20 @@ export default function VectorDBPage() {
                         <div className="space-y-4">
                             <div>
                                 <div className="flex justify-between text-xs text-slate-400 mb-1">
-                                    <span>메모리 사용량 <span className="text-slate-500">({totalMemoryStr})</span></span>
-                                    <span className="text-emerald-400">{memoryPercent.toFixed(1)}%</span>
+                                    <span>전체 추출 텍스트 볼륨 <span className="text-slate-500">({totalExtractedStr})</span></span>
+                                    <span className="text-emerald-400">{completionRate}% 추출</span>
                                 </div>
                                 <div className="w-full bg-slate-900 rounded-full h-2">
-                                    <div className="bg-emerald-500 h-2 rounded-full transition-all duration-1000" style={{ width: `${Math.max(2, memoryPercent)}%` }}></div>
+                                    <div className="bg-emerald-500 h-2 rounded-full transition-all duration-1000" style={{ width: `${completionRate}%` }}></div>
                                 </div>
                             </div>
                             <div>
                                 <div className="flex justify-between text-xs text-slate-400 mb-1">
-                                    <span>검색 지연시간(Latency)</span>
-                                    <span className="text-emerald-400">~{avgLatency}ms</span>
+                                    <span>파티셔닝 벡터 서브청크(Chunks)</span>
+                                    <span className="text-emerald-400">{chunkCount} 개</span>
                                 </div>
                                 <div className="w-full bg-slate-900 rounded-full h-2">
-                                    <div className="bg-emerald-500 h-2 rounded-full transition-all duration-1000" style={{ width: '8%' }}></div>
+                                    <div className="bg-emerald-500 h-2 rounded-full transition-all duration-1000" style={{ width: `${chunkCount > 0 ? Math.min(100, Math.max(5, chunkCount * 2)) : 0}%` }}></div>
                                 </div>
                             </div>
                         </div>
