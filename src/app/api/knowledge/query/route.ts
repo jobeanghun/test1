@@ -15,7 +15,7 @@ export async function POST(req: NextRequest) {
             }, { status: 200 });
         }
 
-        const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
+        const model = genAI.getGenerativeModel({ model: "gemini-2.5-pro" });
 
         const prompt = `
 당신은 사용자가 첨부한 문서 [${contextFilename}] 기반으로만 답변을 제공하는 전문 AIOps 분석 시스템입니다.

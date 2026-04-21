@@ -116,10 +116,21 @@ export default function LogAnalyzePage() {
       });
     } catch (error: any) {
       console.error(error);
+      const errorMessage = typeof error === 'string' ? error : error.message;
       setResult({
         status: 'danger',
         summary: '분석 실패',
-        rawResult: typeof error === 'string' ? error : error.message
+        rawResult: errorMessage
+      });
+
+      // 에러 발생 시에도 히스토리 저장
+      addAnalysis({
+        id: Date.now().toString(),
+        time: new Date().toLocaleString(),
+        equipmentName: equipmentName || "장비명 미상",
+        shortDescription: shortDescription || "설명 없음",
+        summary: '분석 실패',
+        rawResult: errorMessage
       });
     } finally {
       setIsAnalyzing(false);
