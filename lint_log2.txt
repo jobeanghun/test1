@@ -1,0 +1,120 @@
+﻿
+D:\99. 媛쒕컻 ?뚯뒪??Antigravity\2. ?μ븷 遺꾩꽍 諛?梨꾪똿\aiops-dashboard\src\app\admin\users\page.tsx
+    5:46   warning  'MoreVertical' is defined but never used  @typescript-eslint/no-unused-vars
+    6:13   warning  'Filter' is defined but never used        @typescript-eslint/no-unused-vars
+    6:36   warning  'CheckCircle2' is defined but never used  @typescript-eslint/no-unused-vars
+   38:36   error    Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   39:34   error    Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  256:102  error    Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  316:110  error    Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+D:\99. 媛쒕컻 ?뚯뒪??Antigravity\2. ?μ븷 遺꾩꽍 諛?梨꾪똿\aiops-dashboard\src\app\api\analyze\route.ts
+  74:13  error  'rawResult' is never reassigned. Use 'const' instead  prefer-const
+  86:21  error  Unexpected any. Specify a different type              @typescript-eslint/no-explicit-any
+
+D:\99. 媛쒕컻 ?뚯뒪??Antigravity\2. ?μ븷 遺꾩꽍 諛?梨꾪똿\aiops-dashboard\src\app\api\knowledge\query\route.ts
+  52:21  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+D:\99. 媛쒕컻 ?뚯뒪??Antigravity\2. ?μ븷 遺꾩꽍 諛?梨꾪똿\aiops-dashboard\src\app\api\knowledge\report\route.ts
+  17:49  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  68:21  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+D:\99. 媛쒕컻 ?뚯뒪??Antigravity\2. ?μ븷 遺꾩꽍 諛?梨꾪똿\aiops-dashboard\src\app\api\knowledge\upload\route.ts
+   17:23  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   18:16  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   43:38  error  A `require()` style import is forbidden   @typescript-eslint/no-require-imports
+   62:38  error  A `require()` style import is forbidden   @typescript-eslint/no-require-imports
+   72:21  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  134:21  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+D:\99. 媛쒕컻 ?뚯뒪??Antigravity\2. ?μ븷 遺꾩꽍 諛?梨꾪똿\aiops-dashboard\src\app\api\users\route.ts
+  22:14  warning  'error' is defined but never used  @typescript-eslint/no-unused-vars
+
+D:\99. 媛쒕컻 ?뚯뒪??Antigravity\2. ?μ븷 遺꾩꽍 諛?梨꾪똿\aiops-dashboard\src\app\api\war-room\participants\route.ts
+  26:75  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  47:17  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+D:\99. 媛쒕컻 ?뚯뒪??Antigravity\2. ?μ븷 遺꾩꽍 諛?梨꾪똿\aiops-dashboard\src\app\api\war-room\rooms\route.ts
+   6:27  warning  'request' is defined but never used  @typescript-eslint/no-unused-vars
+  35:14  warning  'error' is defined but never used    @typescript-eslint/no-unused-vars
+
+D:\99. 媛쒕컻 ?뚯뒪??Antigravity\2. ?μ븷 遺꾩꽍 諛?梨꾪똿\aiops-dashboard\src\app\knowledge\page.tsx
+  49:25  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+D:\99. 媛쒕컻 ?뚯뒪??Antigravity\2. ?μ븷 遺꾩꽍 諛?梨꾪똿\aiops-dashboard\src\app\login\page.tsx
+  27:52  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+D:\99. 媛쒕컻 ?뚯뒪??Antigravity\2. ?μ븷 遺꾩꽍 諛?梨꾪똿\aiops-dashboard\src\app\page.tsx
+   20:27  error  Unexpected any. Specify a different type                         @typescript-eslint/no-explicit-any
+  117:21  error  Unexpected any. Specify a different type                         @typescript-eslint/no-explicit-any
+  181:9   error  'html' is never reassigned. Use 'const' instead                  prefer-const
+  341:34  error  `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`  react/no-unescaped-entities
+  341:40  error  `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`  react/no-unescaped-entities
+
+D:\99. 媛쒕컻 ?뚯뒪??Antigravity\2. ?μ븷 遺꾩꽍 諛?梨꾪똿\aiops-dashboard\src\app\vector-dashboard\page.tsx
+  60:25  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+D:\99. 媛쒕컻 ?뚯뒪??Antigravity\2. ?μ븷 遺꾩꽍 諛?梨꾪똿\aiops-dashboard\src\app\vector-db\page.tsx
+   12:9   error  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+D:\99. 媛쒕컻 ?뚯뒪??Antigravity\2. ?μ븷 遺꾩꽍 諛?梨꾪똿\aiops-dashboard\src\app\vector-db\page.tsx:12:9
+  10 |
+  11 |     useEffect(() => {
+> 12 |         setMounted(true);
+     |         ^^^^^^^^^^ Avoid calling setState() directly within an effect
+  13 |     }, []);
+  14 |
+  15 |     // ?대쫫 湲곕컲 理쒖떊 臾몄꽌濡?以묐났 ?쒓굅 ?곗궛  react-hooks/set-state-in-effect
+  151:59  error  Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    @typescript-eslint/no-explicit-any
+
+D:\99. 媛쒕컻 ?뚯뒪??Antigravity\2. ?μ븷 遺꾩꽍 諛?梨꾪똿\aiops-dashboard\src\app\war-room\page.tsx
+    5:5   warning  'AlertTriangle' is defined but never used                                                                                                                                @typescript-eslint/no-unused-vars
+    6:50  warning  'ShieldCheck' is defined but never used                                                                                                                                  @typescript-eslint/no-unused-vars
+   97:56  error    Unexpected any. Specify a different type                                                                                                                                 @typescript-eslint/no-explicit-any
+  128:8   warning  React Hook useEffect has missing dependencies: 'addMessageToRoom', 'addWarRoom', 'currentUser', and 'removeWarRoom'. Either include them or remove the dependency array  react-hooks/exhaustive-deps
+  266:18  warning  'error' is defined but never used                                                                                                                                        @typescript-eslint/no-unused-vars
+  280:81  error    Unexpected any. Specify a different type                                                                                                                                 @typescript-eslint/no-explicit-any
+  284:63  error    Unexpected any. Specify a different type                                                                                                                                 @typescript-eslint/no-explicit-any
+  307:80  error    Unexpected any. Specify a different type                                                                                                                                 @typescript-eslint/no-explicit-any
+  311:13  error    'cover' is never reassigned. Use 'const' instead                                                                                                                         prefer-const
+  342:21  error    'slide' is never reassigned. Use 'const' instead                                                                                                                         prefer-const
+  359:13  error    'endSlide' is never reassigned. Use 'const' instead                                                                                                                      prefer-const
+
+D:\99. 媛쒕컻 ?뚯뒪??Antigravity\2. ?μ븷 遺꾩꽍 諛?梨꾪똿\aiops-dashboard\src\components\layout\AuthGuard.tsx
+  14:9  error  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+D:\99. 媛쒕컻 ?뚯뒪??Antigravity\2. ?μ븷 遺꾩꽍 諛?梨꾪똿\aiops-dashboard\src\components\layout\AuthGuard.tsx:14:9
+  12 |
+  13 |     useEffect(() => {
+> 14 |         setMounted(true);
+     |         ^^^^^^^^^^ Avoid calling setState() directly within an effect
+  15 |     }, []);
+  16 |
+  17 |     useEffect(() => {  react-hooks/set-state-in-effect
+
+D:\99. 媛쒕컻 ?뚯뒪??Antigravity\2. ?μ븷 遺꾩꽍 諛?梨꾪똿\aiops-dashboard\src\lib\serverStore.ts
+   8:27  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  35:29  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+D:\99. 媛쒕컻 ?뚯뒪??Antigravity\2. ?μ븷 遺꾩꽍 諛?梨꾪똿\aiops-dashboard\src\store\useStore.ts
+  94:17  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+D:\99. 媛쒕컻 ?뚯뒪??Antigravity\2. ?μ븷 遺꾩꽍 諛?梨꾪똿\aiops-dashboard\test_pdf.js
+  2:9   warning  'pdfParse' is assigned a value but never used  @typescript-eslint/no-unused-vars
+  2:20  error    A `require()` style import is forbidden        @typescript-eslint/no-require-imports
+
+??50 problems (39 errors, 11 warnings)
+  5 errors and 0 warnings potentially fixable with the `--fix` option.
+
