@@ -15,7 +15,7 @@ export async function POST(req: NextRequest) {
             }, { status: 200 });
         }
 
-        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+        const model = genAI.getGenerativeModel({ model: "gemini-pro" });
 
         const prompt = `
 당신은 사용자가 첨부한 문서 [${contextFilename}] 기반으로만 답변을 제공하는 전문 AIOps 분석 시스템입니다.
@@ -23,7 +23,7 @@ export async function POST(req: NextRequest) {
 반드시 아래의 '데이터 검증 프로토콜'을 철저히 준수하세요.
 
 [첨부 문서 내용 시작]
-${contextText ? contextText.substring(0, 200000) : '문서 내용이 없습니다.'}
+${contextText ? contextText.substring(0, 40000) : '문서 내용이 없습니다.'}
 [첨부 문서 내용 끝]
 
 1. 정확한 정보 추출:
