@@ -3,6 +3,7 @@ import { Pinecone } from '@pinecone-database/pinecone';
 import { OpenAIEmbeddings } from '@langchain/openai';
 import { PineconeStore } from '@langchain/pinecone';
 import { Document } from '@langchain/core/documents';
+import { parseOffice } from 'officeparser';
 
 // =========================================================================
 // [RAG 파이프라인 백엔드 연동 뼈대]
@@ -59,8 +60,7 @@ export async function POST(req: NextRequest) {
                     textContent += `\n[경고: 해당 PDF에서 유효한 텍스트를 추출하지 못했습니다. 이미지만 있는 문서일 수 있습니다.]`;
                 }
             } else if (fileNameLower.endsWith('.pptx') || fileNameLower.endsWith('.docx') || fileNameLower.endsWith('.xlsx')) {
-                const officeParser = require('officeparser');
-                const parsedResult = await officeParser.parseOffice(buffer);
+                const parsedResult = await parseOffice(buffer);
                 textContent += parsedResult.toText();
                 
                 if (!parsedResult.toText() || parsedResult.toText().trim().length < 10) {

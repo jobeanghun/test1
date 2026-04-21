@@ -1,7 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   /* config options here */
-  serverExternalPackages: ["pdf-parse", "officeparser", "file-type"],
+  serverExternalPackages: ["pdf-parse"],
   eslint: {
     ignoreDuringBuilds: true,
   },
@@ -9,11 +9,7 @@ const nextConfig = {
     ignoreBuildErrors: true,
   },
   outputFileTracingIncludes: {
-    '/api/**/*': [
-      './node_modules/pdf-parse/**/*', 
-      './node_modules/officeparser/**/*',
-      './node_modules/file-type/**/*'
-    ],
+    '/api/**/*': ['./node_modules/pdf-parse/**/*'],
   },
 };
 
