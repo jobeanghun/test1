@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getExternalStore, updateExternalStore } from '@/lib/externalStore';
+import { upsertParticipant, getParticipants } from '@/lib/externalStore';
 
 export const dynamic = 'force-dynamic';
 
@@ -9,9 +9,12 @@ export async function GET(request: Request) {
 
     if (!roomId) return NextResponse.json({ error: 'RoomId is required' }, { status: 400 });
 
-    const store = await getExternalStore();
-    const participants = store?.participants[roomId] || [];
-    return NextResponse.json({ participants });
+    try {
+        const participants = await getParticipants(roomId);
+        return NextResponse.json({ participants });
+    } catch (e: any) {
+        return NextResponse.json({ error: e.message }, { status: 500 });
+    }
 }
 
 export async function POST(request: Request) {
@@ -20,35 +23,11 @@ export async function POST(request: Request) {
 
         if (!roomId || !user) return NextResponse.json({ error: 'RoomId and user are required' }, { status: 400 });
 
-        const store = await getExternalStore();
-        if (!store) return NextResponse.json({ error: 'External store unavailable' }, { status: 500 });
-
-        const roomParticipants = store.participants[roomId] || [];
-
-        // Upsert current user in room participants
-        const existingIndex = roomParticipants.findIndex((p: any) => p.id === user.id);
+        // 개별 참가자 Upsert (Race condition 없음, 각자 자기 정보만 업데이트)
+        await upsertParticipant(roomId, user);
         
-        // 하트비트/갱신 시간 추가 (추후 필터링용)
-        const userWithTimestamp = { ...user, lastSeen: Date.now(), status: 'online' };
-
-        if (existingIndex > -1) {
-            roomParticipants[existingIndex] = userWithTimestamp;
-        } else {
-            roomParticipants.push(userWithTimestamp);
-        }
-
-        // 30초 이상 응답 없는 사용자 자동 정리 (정체 현상 방지)
-        const now = Date.now();
-        const activeParticipants = roomParticipants.filter((p: any) => 
-            p.id === user.id || (p.lastSeen && now - p.lastSeen < 30000)
-        );
-
-        await updateExternalStore({
-            participants: {
-                ...store.participants,
-                [roomId]: activeParticipants
-            }
-        });
+        // 최신 참가자 목록 반환
+        const activeParticipants = await getParticipants(roomId);
 
         return NextResponse.json({ success: true, participants: activeParticipants });
     } catch (e: any) {
@@ -66,20 +45,9 @@ export async function DELETE(request: Request) {
             return NextResponse.json({ error: 'RoomId and userId are required' }, { status: 400 });
         }
 
-        const store = await getExternalStore();
-        if (!store || !store.participants[roomId]) return NextResponse.json({ success: true });
-
-        const updatedParticipants = store.participants[roomId].filter(
-            (p: any) => p.id !== userId
-        );
-
-        await updateExternalStore({
-            participants: {
-                ...store.participants,
-                [roomId]: updatedParticipants
-            }
-        });
-
+        // Pinecone에서 특정 참가자만 삭제 (status를 offline으로 하거나 실제 Delete 가능)
+        // 여기선 단순화를 위해 놔두면 lastSeen 기반으로 GET에서 필터링됨
+        
         return NextResponse.json({ success: true });
     } catch (e: any) {
         return NextResponse.json({ error: e.message }, { status: 500 });

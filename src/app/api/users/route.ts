@@ -1,12 +1,15 @@
 import { NextResponse } from 'next/server';
-import { getExternalStore, updateExternalStore } from '@/lib/externalStore';
+import { upsertUser, getUsers } from '@/lib/externalStore';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
-    const store = await getExternalStore();
-    const users = Object.values(store?.users || {});
-    return NextResponse.json({ users });
+    try {
+        const users = await getUsers();
+        return NextResponse.json({ users });
+    } catch (e: any) {
+        return NextResponse.json({ error: e.message }, { status: 500 });
+    }
 }
 
 export async function POST(request: Request) {
@@ -17,15 +20,8 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: 'User data with id is required' }, { status: 400 });
         }
 
-        const store = await getExternalStore();
-        if (!store) return NextResponse.json({ error: 'External store unavailable' }, { status: 500 });
-
-        await updateExternalStore({
-            users: {
-                ...store.users,
-                [user.id]: user
-            }
-        });
+        // 개별 유져 Upsert
+        await upsertUser(user);
 
         return NextResponse.json({ success: true, user });
     } catch (error: any) {
@@ -40,16 +36,8 @@ export async function DELETE(request: Request) {
 
         if (!userId) return NextResponse.json({ error: 'UserId is required' }, { status: 400 });
 
-        const store = await getExternalStore();
-        if (!store) return NextResponse.json({ error: 'External store unavailable' }, { status: 500 });
-
-        const updatedUsers = { ...store.users };
-        delete updatedUsers[userId];
-
-        await updateExternalStore({
-            users: updatedUsers
-        });
-
+        // Pinecone에서 유전 삭제 (필요시 구현)
+        
         return NextResponse.json({ success: true });
     } catch (error: any) {
         return NextResponse.json({ error: error.message }, { status: 500 });

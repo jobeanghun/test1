@@ -57,46 +57,11 @@ export default function WarRoomPage() {
 
     // --- Sync Logic (Polling) ---
     useEffect(() => {
-        if (!activeRoomId || !currentUser) return;
+        if (!currentUser) return;
 
         const syncData = async () => {
             try {
-                // 1. Sync & Heartbeat Participants
-                const pRes = await fetch(`/api/war-room/participants`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ roomId: activeRoomId, user: currentUser }),
-                    cache: 'no-store'
-                });
-                if (pRes.ok) {
-                    const pData = await pRes.json();
-                    if (pData.participants) setServerParticipants(pData.participants);
-                }
-
-                // 2. Sync Messages
-                const mRes = await fetch(`/api/war-room/messages?roomId=${activeRoomId}`, { cache: 'no-store' });
-                if (mRes.ok) {
-                    const mData = await mRes.json();
-                    const currentActiveRoom = useStore.getState().warRooms.find(r => r.id === activeRoomId);
-
-                    if (mData.messages && currentActiveRoom) {
-                        const localLog = currentActiveRoom.chatLog;
-                        const serverLog = mData.messages as ChatMessage[];
-                        
-                        // ID 기반으로 로컬에 없는 메시지만 추가 (중복 방지 강화)
-                        const newMessages = serverLog.filter(sm => 
-                            !localLog.some(lm => lm.id === sm.id)
-                        );
-                        
-                        if (newMessages.length > 0) {
-                            newMessages.forEach(msg => {
-                                addMessageToRoom(activeRoomId, msg);
-                            });
-                        }
-                    }
-                }
-
-                // 3. Sync Rooms (다른 사용자가 만든 방도 목록에 보이게 함)
+                // 1. Sync Rooms (모든 화면에서 워룸 목록 동기화)
                 const rRes = await fetch(`/api/war-room/rooms`, { cache: 'no-store' });
                 if (rRes.ok) {
                     const rData = await rRes.json();
@@ -104,15 +69,56 @@ export default function WarRoomPage() {
                         const serverRooms = rData.rooms as any[];
                         const currentWarRooms = useStore.getState().warRooms;
                         
+                        // 서버에만 있는 방 추가
                         serverRooms.forEach(sr => {
                             if (!currentWarRooms.some(lr => lr.id === sr.id)) {
-                                addWarRoom({
-                                    ...sr,
-                                    chatLog: [],
-                                    participants: []
-                                });
+                                addWarRoom({ ...sr, chatLog: [], participants: [] });
                             }
                         });
+                        
+                        // 로컬에는 있는데 서버에는 없는 방 제거 (삭제 대응)
+                        currentWarRooms.forEach(lr => {
+                            if (!serverRooms.some(sr => sr.id === lr.id)) {
+                                removeWarRoom(lr.id);
+                            }
+                        });
+                    }
+                }
+
+                // 2. Active Room 관련 동기화 (방이 선택된 경우에만)
+                if (activeRoomId) {
+                    // 2-1. Sync & Heartbeat Participants
+                    const pRes = await fetch(`/api/war-room/participants`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ roomId: activeRoomId, user: currentUser }),
+                        cache: 'no-store'
+                    });
+                    if (pRes.ok) {
+                        const pData = await pRes.json();
+                        if (pData.participants) setServerParticipants(pData.participants);
+                    }
+
+                    // 2-2. Sync Messages
+                    const mRes = await fetch(`/api/war-room/messages?roomId=${activeRoomId}`, { cache: 'no-store' });
+                    if (mRes.ok) {
+                        const mData = await mRes.json();
+                        // 최신 상태 다시 확인
+                        const currentActiveRoom = useStore.getState().warRooms.find(r => r.id === activeRoomId);
+
+                        if (mData.messages && currentActiveRoom) {
+                            const localLog = currentActiveRoom.chatLog;
+                            const serverLog = mData.messages as ChatMessage[];
+                            
+                            // ID 기반 중복 체크 및 정렬된 합치기
+                            const newMessages = serverLog.filter(sm => 
+                                !localLog.some(lm => lm.id === sm.id)
+                            );
+                            
+                            if (newMessages.length > 0) {
+                                newMessages.forEach(msg => addMessageToRoom(activeRoomId, msg));
+                            }
+                        }
                     }
                 }
             } catch (e) { console.error("Sync Error", e); }
@@ -121,11 +127,15 @@ export default function WarRoomPage() {
         syncData(); 
         const interval = setInterval(syncData, 3000); 
         return () => clearInterval(interval);
-    }, [activeRoomId, currentUser?.id, currentUser?.name, currentUser?.role]);
+    }, [activeRoomId, currentUser?.id]);
 
+    // 스크롤 동기화
     useEffect(() => {
         if (scrollRef.current) {
-            scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+            scrollRef.current.scrollTo({
+                top: scrollRef.current.scrollHeight,
+                behavior: 'smooth'
+            });
         }
     }, [activeRoom?.chatLog.length]);
 
