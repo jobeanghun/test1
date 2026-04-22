@@ -1,12 +1,11 @@
 import { NextResponse } from 'next/server';
-import { warRoomStore } from '@/lib/serverStore';
+import { getExternalStore, updateExternalStore } from '@/lib/externalStore';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: Request) {
-    const rooms = Object.values(warRoomStore.rooms);
-    // Sort by most recent based on key assumption or just return values
-    // In our case time is a string, let's just return what we have (newest first depends on insertion, but Object.values order is not guaranteed. The client will handle it).
+    const store = await getExternalStore();
+    const rooms = Object.values(store?.rooms || {});
     return NextResponse.json({ rooms }, {
         headers: {
             'Cache-Control': 'no-store, max-age=0',
@@ -23,7 +22,10 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: 'Room data with id is required' }, { status: 400 });
         }
 
-        warRoomStore.rooms[room.id] = {
+        const store = await getExternalStore();
+        if (!store) return NextResponse.json({ error: 'External store unavailable' }, { status: 500 });
+
+        const updatedRoom = {
             id: room.id,
             title: room.title,
             description: room.description,
@@ -31,21 +33,46 @@ export async function POST(request: Request) {
             time: room.time
         };
 
-        return NextResponse.json({ success: true, room: warRoomStore.rooms[room.id] });
-    } catch (error) {
-        return NextResponse.json({ error: 'Invalid request' }, { status: 400 });
+        await updateExternalStore({
+            rooms: {
+                ...store.rooms,
+                [room.id]: updatedRoom
+            }
+        });
+
+        return NextResponse.json({ success: true, room: updatedRoom });
+    } catch (error: any) {
+        return NextResponse.json({ error: error.message || 'Invalid request' }, { status: 400 });
     }
 }
 
 export async function DELETE(request: Request) {
-    const { searchParams } = new URL(request.url);
-    const roomId = searchParams.get('roomId');
+    try {
+        const { searchParams } = new URL(request.url);
+        const roomId = searchParams.get('roomId');
 
-    if (!roomId) return NextResponse.json({ error: 'RoomId is required' }, { status: 400 });
+        if (!roomId) return NextResponse.json({ error: 'RoomId is required' }, { status: 400 });
 
-    delete warRoomStore.rooms[roomId];
-    delete warRoomStore.messages[roomId];
-    delete warRoomStore.participants[roomId];
+        const store = await getExternalStore();
+        if (!store) return NextResponse.json({ error: 'External store unavailable' }, { status: 500 });
 
-    return NextResponse.json({ success: true });
+        const updatedRooms = { ...store.rooms };
+        delete updatedRooms[roomId];
+
+        const updatedMessages = { ...store.messages };
+        delete updatedMessages[roomId];
+
+        const updatedParticipants = { ...store.participants };
+        delete updatedParticipants[roomId];
+
+        await updateExternalStore({
+            rooms: updatedRooms,
+            messages: updatedMessages,
+            participants: updatedParticipants
+        });
+
+        return NextResponse.json({ success: true });
+    } catch (error: any) {
+        return NextResponse.json({ error: error.message }, { status: 500 });
+    }
 }
