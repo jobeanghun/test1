@@ -26,11 +26,23 @@ export default function KnowledgeBasePage() {
                 body: formData,
             });
 
-            const data = await res.json();
-
             if (!res.ok) {
-                throw new Error(data.error || "업로드에 실패했습니다.");
+                if (res.status === 413) {
+                    throw new Error("파일 용량이 너무 큽니다 (Vercel 무료 티어 파일 업로드 제한: 4.5MB). 파일을 더 작게 나누어 올려주세요.");
+                }
+                const errorText = await res.text();
+                if (errorText.includes("Request Entity") || errorText.includes("413")) {
+                    throw new Error("파일 용량이 너무 큽니다 (Vercel 무료 티어 파일 업로드 제한: 4.5MB). 파일을 더 작게 나누어 올려주세요.");
+                }
+                try {
+                    const errJson = JSON.parse(errorText);
+                    throw new Error(errJson.error || "업로드에 실패했습니다.");
+                } catch {
+                    throw new Error(`서버 비정상 응답 (${res.status}): 업로드 실패`);
+                }
             }
+
+            const data = await res.json();
             
             // Zustand 전역 상태에 추가하여 즉각적으로 타 대시보드(벡터 DB 뷰어 등)에 연동
             // Zustand 전역 상태에 추가
