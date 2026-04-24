@@ -104,19 +104,9 @@ export const useStore = create<AppState>()(
             currentUser: null,
             analysisHistory: [],
             knowledgeDocs: [],
-            warRooms: [
-                {
-                    id: 'WR-001',
-                    title: 'CORE-DB 네트워크 지연 대응',
-                    description: '메인 데이터베이스 서버의 응답 속도가 500ms 이상으로 급증하여 서비스 지연 발생 중',
-                    level: 'danger',
-                    time: '15:24',
-                    chatLog: [],
-                    participants: [] // 실시간 접속자만 표시하기 위해 비워둠
-                }
-            ],
+            warRooms: [],
             users: [
-                { id: 'user-1', name: '김이산 (Admin)', email: 'admin@infinity.net', role: 'admin', status: 'online', color: '#10B981', password: 'password' },
+                { id: 'user-1', name: '조병훈 (Admin)', email: 'admin@infinity.net', role: 'admin', status: 'online', color: '#10B981', password: 'password' },
                 { id: 'user-2', name: '박테크 (User)', email: 'park@infinity.net', role: 'user', status: 'online', color: '#3B82F6', password: 'password' },
                 { id: 'user-3', name: '이코드 (User)', email: 'lee@infinity.net', role: 'user', status: 'offline', color: '#F59E0B', password: 'password' },
                 { id: 'user-4', name: '정인프 (User)', email: 'jung@infinity.net', role: 'user', status: 'online', color: '#8B5CF6', password: 'password' },
@@ -207,6 +197,16 @@ export const useStore = create<AppState>()(
         }),
         {
             name: 'aiops-storage',
+            version: 1,
+            migrate: (persistedState: any, version: number) => {
+                if (version === 0) {
+                    // 브라우저 캐시에 남아있는 CORE-DB 하드코딩 방을 영구 삭제
+                    if (persistedState.warRooms) {
+                        persistedState.warRooms = persistedState.warRooms.filter((r: any) => !r.title.includes("CORE-DB"));
+                    }
+                }
+                return persistedState as AppState;
+            },
             partialize: (state) => ({
                 isAuthenticated: state.isAuthenticated,
                 currentUser: state.currentUser,

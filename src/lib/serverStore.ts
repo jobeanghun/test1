@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { ChatMessage, UserProfile } from "@/store/useStore";
 
 // Mock database for prototype (persists while dev server is running)
@@ -19,15 +20,7 @@ const globalStore: {
         'test-1': { id: 'test-1', name: '테스터1 (User)', email: 'test1@lguplus.co.kr', role: 'user', status: 'offline', color: '#EC4899', password: 'password' },
         'test-2': { id: 'test-2', name: '테스터2 (User)', email: 'test2@lguplus.co.kr', role: 'user', status: 'offline', color: '#8B5CF6', password: 'password' }
     },
-    rooms: {
-        'WR-001': {
-            id: 'WR-001',
-            title: 'CORE-DB 네트워크 지연 대응',
-            description: '메인 데이터베이스 서버의 응답 속도가 500ms 이상으로 급증하여 서비스 지연 발생 중',
-            level: 'danger',
-            time: '15:24'
-        }
-    },
+    rooms: {},
     lastUpdate: {}
 };
 

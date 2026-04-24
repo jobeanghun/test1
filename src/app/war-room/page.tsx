@@ -69,19 +69,31 @@ export default function WarRoomPage() {
                         const serverRooms = rData.rooms as any[];
                         const currentWarRooms = useStore.getState().warRooms;
                         
-                        // 서버에만 있는 방 추가
-                        serverRooms.forEach(sr => {
-                            if (!currentWarRooms.some(lr => lr.id === sr.id)) {
-                                addWarRoom({ ...sr, chatLog: [], participants: [] });
+                        // 서버의 최신 방 목록을 기반으로 로컬 상태 병합
+                        const updatedWarRooms = serverRooms.map(sr => {
+                            const existingLocal = currentWarRooms.find(lr => lr.id === sr.id);
+                            if (existingLocal) {
+                                // 기존 방: 메타데이터는 서버(sr) 기준, 채팅로그는 로컬(existingLocal) 유지
+                                return { ...existingLocal, title: sr.title, level: sr.level, description: sr.description };
+                            } else {
+                                // 신규 방: 채팅로그 빈 배열로 초기화
+                                return { ...sr, chatLog: [], participants: [] };
                             }
                         });
-                        
-                        // 로컬에는 있는데 서버에는 없는 방 제거 (삭제 대응)
+
+                        // 로컬에서 방금 만들었는데 아직 서버 응답이 반영 안 된 1분 이내 방은 보존 (Race condition 방지)
+                        const now = Date.now();
                         currentWarRooms.forEach(lr => {
-                            if (!serverRooms.some(sr => sr.id === lr.id)) {
-                                removeWarRoom(lr.id);
+                            if (!updatedWarRooms.some(ur => ur.id === lr.id)) {
+                                // id가 timestamp 형태이므로 숫자로 변환해서 5초 이내에 만들어진 방이면 보존
+                                const roomTime = parseInt(lr.id, 10);
+                                if (!isNaN(roomTime) && (now - roomTime < 5000)) {
+                                    updatedWarRooms.push(lr);
+                                }
                             }
                         });
+
+                        useStore.getState().setWarRooms(updatedWarRooms);
                     }
                 }
 
