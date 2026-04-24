@@ -22,7 +22,7 @@ export async function POST(req: Request) {
 
         // Use Gemini model (Flash is fast and suitable for log analysis)
         const model = genAI.getGenerativeModel({
-            model: "gemini-1.5-flash",
+            model: "gemini-1.0-pro",
             generationConfig: {
                 maxOutputTokens: 8192,
                 temperature: 0.4
