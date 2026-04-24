@@ -1,12 +1,18 @@
 import { NextResponse } from 'next/server';
-import { upsertRoom, getRooms, deleteRoom } from '@/lib/externalStore';
+import { supabase } from '@/lib/supabaseClient';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: Request) {
     try {
-        const rooms = await getRooms();
-        return NextResponse.json({ rooms }, {
+        const { data: rooms, error } = await supabase
+            .from('war_rooms')
+            .select('*')
+            .order('time', { ascending: false });
+
+        if (error) throw error;
+
+        return NextResponse.json({ rooms: rooms || [] }, {
             headers: {
                 'Cache-Control': 'no-store, max-age=0',
                 'Pragma': 'no-cache'
@@ -25,8 +31,17 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: 'Room data with id is required' }, { status: 400 });
         }
 
-        // 개별 워룸 Upsert
-        await upsertRoom(room);
+        const { error } = await supabase
+            .from('war_rooms')
+            .upsert({
+                id: room.id,
+                title: room.title,
+                level: room.level,
+                description: room.description,
+                time: room.time
+            });
+
+        if (error) throw error;
 
         return NextResponse.json({ success: true, room });
     } catch (error: any) {
@@ -41,8 +56,12 @@ export async function DELETE(request: Request) {
 
         if (!roomId) return NextResponse.json({ error: 'RoomId is required' }, { status: 400 });
 
-        // Pinecone에서 방 삭제
-        await deleteRoom(roomId);
+        const { error } = await supabase
+            .from('war_rooms')
+            .delete()
+            .eq('id', roomId);
+
+        if (error) throw error;
 
         return NextResponse.json({ success: true });
     } catch (error: any) {

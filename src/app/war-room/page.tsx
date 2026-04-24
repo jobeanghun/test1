@@ -14,6 +14,7 @@ import {
     AlignmentType 
 } from "docx";
 import pptxgen from "pptxgenjs";
+import { supabase } from '@/lib/supabaseClient';
 
 // --- Types ---
 type TemplateType = 'standard' | 'technical' | 'executive' | 'custom';
@@ -55,90 +56,90 @@ export default function WarRoomPage() {
         ).values()
     );
 
-    // --- Sync Logic (Polling) ---
+    // --- Sync Logic (Supabase Realtime) ---
     useEffect(() => {
         if (!currentUser) return;
 
-        const syncData = async () => {
+        // 1. Initial Load (처음 한 번 & 활성방 변경 시 로드)
+        const fetchInitialData = async () => {
             try {
-                // 1. Sync Rooms (모든 화면에서 워룸 목록 동기화)
                 const rRes = await fetch(`/api/war-room/rooms`, { cache: 'no-store' });
                 if (rRes.ok) {
                     const rData = await rRes.json();
                     if (rData.rooms) {
                         const serverRooms = rData.rooms as any[];
                         const currentWarRooms = useStore.getState().warRooms;
-                        
-                        // 서버의 최신 방 목록을 기반으로 로컬 상태 병합
                         const updatedWarRooms = serverRooms.map(sr => {
                             const existingLocal = currentWarRooms.find(lr => lr.id === sr.id);
-                            if (existingLocal) {
-                                // 기존 방: 메타데이터는 서버(sr) 기준, 채팅로그는 로컬(existingLocal) 유지
-                                return { ...existingLocal, title: sr.title, level: sr.level, description: sr.description };
-                            } else {
-                                // 신규 방: 채팅로그 빈 배열로 초기화
-                                return { ...sr, chatLog: [], participants: [] };
-                            }
+                            return existingLocal 
+                                ? { ...existingLocal, title: sr.title, level: sr.level, description: sr.description } 
+                                : { ...sr, chatLog: [], participants: [] };
                         });
-
-                        // 로컬에서 방금 만들었는데 아직 서버 응답이 반영 안 된 1분 이내 방은 보존 (Race condition 방지)
-                        const now = Date.now();
-                        currentWarRooms.forEach(lr => {
-                            if (!updatedWarRooms.some(ur => ur.id === lr.id)) {
-                                // id가 timestamp 형태이므로 숫자로 변환해서 5초 이내에 만들어진 방이면 보존
-                                const roomTime = parseInt(lr.id, 10);
-                                if (!isNaN(roomTime) && (now - roomTime < 5000)) {
-                                    updatedWarRooms.push(lr);
-                                }
-                            }
-                        });
-
                         useStore.getState().setWarRooms(updatedWarRooms);
                     }
                 }
 
-                // 2. Active Room 관련 동기화 (방이 선택된 경우에만)
                 if (activeRoomId) {
-                    // 2-1. Sync & Heartbeat Participants
-                    const pRes = await fetch(`/api/war-room/participants`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ roomId: activeRoomId, user: currentUser }),
-                        cache: 'no-store'
-                    });
-                    if (pRes.ok) {
-                        const pData = await pRes.json();
-                        if (pData.participants) setServerParticipants(pData.participants);
-                    }
-
-                    // 2-2. Sync Messages
                     const mRes = await fetch(`/api/war-room/messages?roomId=${activeRoomId}`, { cache: 'no-store' });
                     if (mRes.ok) {
                         const mData = await mRes.json();
-                        // 최신 상태 다시 확인
                         const currentActiveRoom = useStore.getState().warRooms.find(r => r.id === activeRoomId);
-
                         if (mData.messages && currentActiveRoom) {
                             const localLog = currentActiveRoom.chatLog;
                             const serverLog = mData.messages as ChatMessage[];
-                            
-                            // ID 기반 중복 체크 및 정렬된 합치기
-                            const newMessages = serverLog.filter(sm => 
-                                !localLog.some(lm => lm.id === sm.id)
-                            );
-                            
+                            const newMessages = serverLog.filter(sm => !localLog.some(lm => lm.id === sm.id));
                             if (newMessages.length > 0) {
                                 newMessages.forEach(msg => addMessageToRoom(activeRoomId, msg));
                             }
                         }
                     }
                 }
-            } catch (e) { console.error("Sync Error", e); }
+            } catch (e) { console.error("Initial Load Error", e); }
         };
 
-        syncData(); 
-        const interval = setInterval(syncData, 3000); 
-        return () => clearInterval(interval);
+        fetchInitialData();
+
+        // 2. Setup Realtime Subscription
+        const channel = supabase.channel(`war-room-sync-${activeRoomId || 'general'}`)
+            .on(
+                'postgres_changes',
+                { event: '*', schema: 'public', table: 'war_rooms' },
+                (payload: any) => {
+                    if (payload.eventType === 'INSERT') {
+                        const newRoom = payload.new;
+                        useStore.getState().addWarRoom({ ...newRoom, chatLog: [], participants: [] });
+                    } else if (payload.eventType === 'DELETE') {
+                        const oldRoom = payload.old;
+                        useStore.getState().removeWarRoom(oldRoom.id);
+                    } else if (payload.eventType === 'UPDATE') {
+                        fetchInitialData();
+                    }
+                }
+            )
+            .on(
+                'postgres_changes',
+                { event: 'INSERT', schema: 'public', table: 'messages' },
+                (payload: any) => {
+                    const newMsg = payload.new;
+                    // 본인이 보낸 메시지는 Optimistic UI로 이미 추가되었으므로 중복 필터링
+                    const currentActiveRoom = useStore.getState().warRooms.find(r => r.id === newMsg.room_id);
+                    if (currentActiveRoom && !currentActiveRoom.chatLog.some(m => m.id === newMsg.id)) {
+                        useStore.getState().addMessageToRoom(newMsg.room_id, {
+                            id: newMsg.id,
+                            sender: newMsg.sender,
+                            text: newMsg.text,
+                            time: newMsg.time,
+                            userId: newMsg.user_id,
+                            color: newMsg.color
+                        });
+                    }
+                }
+            )
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
     }, [activeRoomId, currentUser?.id]);
 
     // 스크롤 동기화
