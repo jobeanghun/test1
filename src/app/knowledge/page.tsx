@@ -45,15 +45,22 @@ export default function KnowledgeBasePage() {
             const data = await res.json();
             
             // Zustand 전역 상태에 추가하여 즉각적으로 타 대시보드(벡터 DB 뷰어 등)에 연동
-            // Zustand 전역 상태에 추가
-            addKnowledgeDoc({
+            const newDoc = {
                 id: Date.now().toString(),
                 filename: data.fileName || file.name,
                 time: new Date().toLocaleString(),
                 timestamp: Date.now(), // 정밀 정렬용
                 content: data.textContent || "내용 오류",
                 filesize: `${(file.size / 1024).toFixed(1)} KB`
-            });
+            };
+            addKnowledgeDoc(newDoc);
+
+            // Supabase DB 동기화
+            fetch('/api/knowledge/docs', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ doc: newDoc })
+            }).catch(e => console.error("Docs sync error", e));
 
             // 백엔드에서 반환한 실제 Pinecone 처리 결과를 사용자 토스트 알림으로 표시
             setUploadSuccessMessage(data.message || `'${file.name}' 파일이 정상적으로 벡터 DB에 반영되었습니다.`);
@@ -170,7 +177,10 @@ export default function KnowledgeBasePage() {
                         </h3>
                         {knowledgeDocs.length > 0 && (
                             <button 
-                                onClick={clearKnowledgeDocs}
+                                onClick={async () => {
+                                    clearKnowledgeDocs();
+                                    await fetch('/api/knowledge/docs?all=true', { method: 'DELETE' });
+                                }}
                                 className="text-xs bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-red-400 px-3 py-1.5 rounded transition-colors border border-slate-700 hover:border-red-500/50"
                             >
                                 전체 기록 삭제
@@ -202,7 +212,11 @@ export default function KnowledgeBasePage() {
                                         본문 미리보기
                                     </button>
                                     <button 
-                                        onClick={(e) => { e.stopPropagation(); removeKnowledgeDoc(doc.id); }}
+                                        onClick={async (e) => { 
+                                            e.stopPropagation(); 
+                                            removeKnowledgeDoc(doc.id); 
+                                            await fetch(`/api/knowledge/docs?id=${doc.id}`, { method: 'DELETE' });
+                                        }}
                                         className="flex items-center justify-center w-8 h-8 rounded-md bg-slate-800 text-slate-400 hover:bg-red-500/20 hover:text-red-400 transition-colors border border-slate-700"
                                         title="기록에서 삭제"
                                     >

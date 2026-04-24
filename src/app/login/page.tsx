@@ -13,27 +13,13 @@ export default function LoginPage() {
     const [password, setPassword] = useState("");
     const [errorMsg, setErrorMsg] = useState("");
 
-    // 최신 서버 유저 데이터 및 로컬 스토리지 데이터 병합
     useEffect(() => {
+        // 최신 사용자 목록 로드
         fetch('/api/users')
             .then(res => res.json())
             .then(data => {
-                if (data.users && data.users.length > 0) {
-                    const serverUsers = data.users;
-                    const mergedUsers = [...serverUsers];
-                    
-                    // 로컬 스토리지에만 있는 유저는 서버 재시작 등으로 유실된 데이터이므로 병합 후 서버 복구
-                    users.forEach(localUser => {
-                        if (!mergedUsers.find((su: any) => su.id === localUser.id)) {
-                            mergedUsers.push(localUser);
-                            fetch('/api/users', {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ user: localUser })
-                            }).catch(e => console.error('Failed to sync missing user:', e));
-                        }
-                    });
-                    setUsers(mergedUsers);
+                if (data.users) {
+                    setUsers(data.users);
                 }
             })
             .catch(e => console.error(e));

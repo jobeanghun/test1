@@ -12,7 +12,41 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
     const isLoginPage = pathname === '/login';
 
     useEffect(() => {
-        // 클라이언트 마운트 후 필요한 로직이 있다면 여기에 작성
+        // App Load 시 필요한 글로벌 데이터 패치
+        const loadGlobalData = async () => {
+            try {
+                // 1. Users DB Load
+                const userRes = await fetch('/api/users');
+                if (userRes.ok) {
+                    const data = await userRes.json();
+                    if (data.users) {
+                        useStore.getState().setUsers(data.users);
+                    }
+                }
+
+                // 2. History DB Load
+                const historyRes = await fetch('/api/history');
+                if (historyRes.ok) {
+                    const data = await historyRes.json();
+                    if (data.history) {
+                        useStore.getState().setAnalysisHistory(data.history);
+                    }
+                }
+
+                // 3. Knowledge Docs DB Load
+                const docsRes = await fetch('/api/knowledge/docs');
+                if (docsRes.ok) {
+                    const data = await docsRes.json();
+                    if (data.docs) {
+                        useStore.getState().setKnowledgeDocs(data.docs);
+                    }
+                }
+            } catch (e) {
+                console.error("Failed to load global data:", e);
+            }
+        };
+
+        loadGlobalData();
     }, []);
 
     return (

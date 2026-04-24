@@ -7,7 +7,7 @@ import { useStore } from "@/store/useStore";
 
 export default function LogAnalyzePage() {
   const router = useRouter();
-  const { addWarRoom, setActiveRoomId, addAnalysis, knowledgeDocs, currentAnalysisDraft, updateAnalysisDraft, clearAnalysisDraft } = useStore();
+  const { currentUser, addWarRoom, setActiveRoomId, addAnalysis, knowledgeDocs, currentAnalysisDraft, updateAnalysisDraft, clearAnalysisDraft } = useStore();
 
   const { logText, equipmentName, shortDescription, category, result } = currentAnalysisDraft;
 
@@ -106,14 +106,23 @@ export default function LogAnalyzePage() {
       });
 
       // 히스토리 저장
-      addAnalysis({
+      const historyItem = {
         id: Date.now().toString(),
         time: new Date().toLocaleString(),
         equipmentName: equipmentName || "장비명 미상",
         shortDescription: shortDescription || "설명 없음",
         summary: data.summary,
-        rawResult: data.rawResult
-      });
+        rawResult: data.rawResult,
+        category: category,
+        userId: currentUser?.id
+      };
+
+      addAnalysis(historyItem);
+      fetch('/api/history', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ item: historyItem })
+      }).catch(e => console.error("History sync error:", e));
     } catch (error: any) {
       console.error(error);
       const errorMessage = typeof error === 'string' ? error : error.message;
@@ -124,14 +133,23 @@ export default function LogAnalyzePage() {
       });
 
       // 에러 발생 시에도 히스토리 저장
-      addAnalysis({
+      const errorItem = {
         id: Date.now().toString(),
         time: new Date().toLocaleString(),
         equipmentName: equipmentName || "장비명 미상",
         shortDescription: shortDescription || "설명 없음",
         summary: '분석 실패',
-        rawResult: errorMessage
-      });
+        rawResult: errorMessage,
+        category: category,
+        userId: currentUser?.id
+      };
+
+      addAnalysis(errorItem);
+      fetch('/api/history', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ item: errorItem })
+      }).catch(e => console.error("History sync error:", e));
     } finally {
       setIsAnalyzing(false);
     }

@@ -72,21 +72,25 @@ export default function AdminUsersPage() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ user: editingUser })
             });
-
-            // Update war room participant if they are inside
-            await fetch('/api/war-room/participants', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ roomId: 'WR-001', user: editingUser })
-            });
         } catch (e) { console.error("Server sync error", e); }
         
         setIsEditModalOpen(false);
         setEditingUser(null);
     };
 
-    const toggleUserStatus = (id: string, currentStatus: string) => {
-        updateUser(id, { status: currentStatus === 'online' ? 'offline' : 'online' });
+    const toggleUserStatus = async (id: string, currentStatus: string) => {
+        const newStatus = currentStatus === 'online' ? 'offline' : 'online';
+        updateUser(id, { status: newStatus as any });
+        const userToUpdate = users.find(u => u.id === id);
+        if (userToUpdate) {
+            try {
+                await fetch('/api/users', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ user: { ...userToUpdate, status: newStatus } })
+                });
+            } catch (e) { console.error("Status sync error", e); }
+        }
     };
 
     return (
@@ -194,7 +198,7 @@ export default function AdminUsersPage() {
                                         <button 
                                             onClick={async () => {
                                                 deleteUser(user.id);
-                                                await fetch(`/api/users?userId=${user.id}`, { method: 'DELETE' });
+                                                await fetch(`/api/users?id=${user.id}`, { method: 'DELETE' });
                                             }}
                                             disabled={user.id === currentUser?.id}
                                             className="p-2 hover:bg-red-500/10 rounded-lg text-red-500/50 hover:text-red-500 transition-colors disabled:opacity-0"

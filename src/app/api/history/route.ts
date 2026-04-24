@@ -4,13 +4,12 @@ import { supabase } from '@/lib/supabaseClient';
 export async function GET() {
     try {
         const { data, error } = await supabase
-            .from('users')
+            .from('analysis_history')
             .select('*')
-            .order('role', { ascending: true }) // admin 먼저
-            .order('name', { ascending: true });
+            .order('time', { ascending: false });
             
         if (error) throw error;
-        return NextResponse.json({ users: data });
+        return NextResponse.json({ history: data });
     } catch (error: any) {
         return NextResponse.json({ error: error.message }, { status: 500 });
     }
@@ -18,24 +17,25 @@ export async function GET() {
 
 export async function POST(request: Request) {
     try {
-        const { user } = await request.json();
+        const { item } = await request.json();
         
-        // Upsert 방식을 통해 새 사용자 생성 또는 기존 사용자 업데이트
         const { data, error } = await supabase
-            .from('users')
-            .upsert({
-                id: user.id,
-                name: user.name,
-                email: user.email,
-                role: user.role,
-                color: user.color,
-                password: user.password // 실제 상용에서는 해싱 필수이나, 현재는 데모용 평문 저장
+            .from('analysis_history')
+            .insert({
+                id: item.id,
+                equipment_name: item.equipmentName,
+                short_description: item.shortDescription,
+                summary: item.summary,
+                raw_result: item.rawResult,
+                category: item.category,
+                time: item.time,
+                user_id: item.userId || 'system'
             })
             .select()
             .single();
 
         if (error) throw error;
-        return NextResponse.json({ user: data });
+        return NextResponse.json({ item: data });
     } catch (error: any) {
         return NextResponse.json({ error: error.message }, { status: 500 });
     }
@@ -46,10 +46,10 @@ export async function DELETE(request: Request) {
         const { searchParams } = new URL(request.url);
         const id = searchParams.get('id');
 
-        if (!id) return NextResponse.json({ error: 'User ID required' }, { status: 400 });
+        if (!id) return NextResponse.json({ error: 'History ID required' }, { status: 400 });
 
         const { error } = await supabase
-            .from('users')
+            .from('analysis_history')
             .delete()
             .eq('id', id);
 

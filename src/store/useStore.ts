@@ -11,6 +11,8 @@ export interface AnalysisItem {
     time: string;
     shortDescription?: string;
     rawResult?: string;
+    category?: string;
+    userId?: string;
 }
 
 export interface KnowledgeDoc {
@@ -105,14 +107,7 @@ export const useStore = create<AppState>()(
             analysisHistory: [],
             knowledgeDocs: [],
             warRooms: [],
-            users: [
-                { id: 'user-1', name: '조병훈 (Admin)', email: 'admin@infinity.net', role: 'admin', status: 'online', color: '#10B981', password: 'password' },
-                { id: 'user-2', name: '박테크 (User)', email: 'park@infinity.net', role: 'user', status: 'online', color: '#3B82F6', password: 'password' },
-                { id: 'user-3', name: '이코드 (User)', email: 'lee@infinity.net', role: 'user', status: 'offline', color: '#F59E0B', password: 'password' },
-                { id: 'user-4', name: '정인프 (User)', email: 'jung@infinity.net', role: 'user', status: 'online', color: '#8B5CF6', password: 'password' },
-                { id: 'test-1', name: '테스터1 (User)', email: 'test1@lguplus.co.kr', role: 'user', status: 'offline', color: '#EC4899', password: 'password' },
-                { id: 'test-2', name: '테스터2 (User)', email: 'test2@lguplus.co.kr', role: 'user', status: 'offline', color: '#8B5CF6', password: 'password' }
-            ],
+            users: [], // DB에서 로드할 예정
             activeRoomId: null,
 
             currentAnalysisDraft: {
@@ -127,7 +122,8 @@ export const useStore = create<AppState>()(
             setSidebarOpen: (open) => set({ sidebarOpen: open }),
 
             login: (email) => set((state) => {
-                const user = state.users.find(u => u.email === email || u.id === email) || state.users[0];
+                const user = state.users.find(u => u.email === email || u.id === email) || null;
+                if (!user) return state; // 로그인 실패 처리 (UI 단에서 에러 핸들링)
                 return { 
                     isAuthenticated: true, 
                     currentUser: { ...user, status: 'online' } 
@@ -138,12 +134,14 @@ export const useStore = create<AppState>()(
             addAnalysis: (item) => set((state) => ({ 
                 analysisHistory: [item, ...state.analysisHistory] 
             })),
+            setAnalysisHistory: (history) => set({ analysisHistory: history }),
             addKnowledgeDoc: (doc) => set((state) => ({ 
                 knowledgeDocs: [doc, ...state.knowledgeDocs] 
             })),
             removeKnowledgeDoc: (id) => set((state) => ({ 
                 knowledgeDocs: state.knowledgeDocs.filter(d => d.id !== id) 
             })),
+            setKnowledgeDocs: (docs) => set({ knowledgeDocs: docs }),
             clearKnowledgeDocs: () => set({ 
                 knowledgeDocs: [] 
             }),
@@ -162,7 +160,7 @@ export const useStore = create<AppState>()(
                         ? { ...room, chatLog: [...room.chatLog, { 
                             ...message, 
                             id: message.id || Date.now().toString() + Math.random().toString(36).substr(2, 5),
-                            userId: message.userId || state.currentUser?.id // userId 유실 방지
+                            userId: message.userId || state.currentUser?.id
                         }] } 
                         : room
                 )
@@ -200,7 +198,6 @@ export const useStore = create<AppState>()(
             version: 1,
             migrate: (persistedState: any, version: number) => {
                 if (version === 0) {
-                    // 브라우저 캐시에 남아있는 CORE-DB 하드코딩 방을 영구 삭제
                     if (persistedState.warRooms) {
                         persistedState.warRooms = persistedState.warRooms.filter((r: any) => !r.title.includes("CORE-DB"));
                     }
@@ -210,10 +207,10 @@ export const useStore = create<AppState>()(
             partialize: (state) => ({
                 isAuthenticated: state.isAuthenticated,
                 currentUser: state.currentUser,
-                analysisHistory: state.analysisHistory,
-                knowledgeDocs: state.knowledgeDocs,
+                // analysisHistory: state.analysisHistory, 제외
+                // knowledgeDocs: state.knowledgeDocs, 제외 (미리 제외)
                 warRooms: state.warRooms,
-                users: state.users,
+                // users: state.users 제외
                 sidebarOpen: state.sidebarOpen,
                 currentAnalysisDraft: state.currentAnalysisDraft
             })
