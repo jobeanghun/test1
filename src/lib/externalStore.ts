@@ -2,15 +2,31 @@
 import { Pinecone } from '@pinecone-database/pinecone';
 import { ChatMessage, UserProfile } from "@/store/useStore";
 
-const pc = new Pinecone({ apiKey: process.env.PINECONE_API_KEY || '' });
-const index = pc.Index('aiops-rag-kb');
-const DUMMY_VECTOR = new Array(1536).fill(0);
+let _index: any = null;
 
+function getIndex() {
+    if (!_index) {
+        if (!process.env.PINECONE_API_KEY) {
+            console.warn("PINECONE_API_KEY is not set. Using dummy index for Next.js build.");
+            // 빌드 시 에러를 막기 위한 더미 인덱스 객체 반환
+            return {
+                fetch: async () => ({ records: {} }),
+                upsert: async () => {},
+                deleteOne: async () => {}
+            };
+        }
+        const pc = new Pinecone({ apiKey: process.env.PINECONE_API_KEY });
+        _index = pc.Index('aiops-rag-kb');
+    }
+    return _index;
+}
+
+const DUMMY_VECTOR = new Array(1536).fill(0);
 const MASTER_ID = 'AIOPS_MASTER_ROOM_LIST';
 
 // Helper: 마스터 방 목록 가져오기 (즉각적 조회)
 async function getMasterRoomIds(): Promise<string[]> {
-    const res = await index.fetch([MASTER_ID]);
+    const res = await getIndex().fetch([MASTER_ID]);
     if (res.records && res.records[MASTER_ID] && res.records[MASTER_ID].metadata) {
         try {
             return JSON.parse(res.records[MASTER_ID].metadata.roomIds as string || '[]');
@@ -21,7 +37,7 @@ async function getMasterRoomIds(): Promise<string[]> {
 
 // Helper: 마스터 방 목록 저장 (즉각적 반영)
 async function saveMasterRoomIds(ids: string[]) {
-    await index.upsert([{
+    await getIndex().upsert([{
         id: MASTER_ID,
         values: DUMMY_VECTOR,
         metadata: { roomIds: JSON.stringify(ids) }
@@ -33,8 +49,8 @@ export async function getRooms() {
     const ids = await getMasterRoomIds();
     if (ids.length === 0) return [];
     
-    const fetchIds = ids.map(id => `ROOM_DATA_${id}`);
-    const res = await index.fetch(fetchIds);
+    const fetchIds = ids.map((id: string) => `ROOM_DATA_${id}`);
+    const res = await getIndex().fetch(fetchIds);
     
     const rooms = [];
     for (const id of fetchIds) {
@@ -57,7 +73,7 @@ export async function upsertRoom(room: any) {
     }
     
     // 기존 채팅/참여자 데이터 보존
-    const res = await index.fetch([`ROOM_DATA_${room.id}`]);
+    const res = await getIndex().fetch([`ROOM_DATA_${room.id}`]);
     let chatLog = "[]";
     let participants = "[]";
     if (res.records && res.records[`ROOM_DATA_${room.id}`] && res.records[`ROOM_DATA_${room.id}`].metadata) {
@@ -65,7 +81,7 @@ export async function upsertRoom(room: any) {
         participants = res.records[`ROOM_DATA_${room.id}`].metadata.participants as string || "[]";
     }
 
-    await index.upsert([{
+    await getIndex().upsert([{
         id: `ROOM_DATA_${room.id}`,
         values: DUMMY_VECTOR,
         metadata: {
@@ -85,14 +101,14 @@ export async function upsertRoom(room: any) {
 // 3. Delete Room
 export async function deleteRoom(roomId: string) {
     const ids = await getMasterRoomIds();
-    const newIds = ids.filter(id => id !== roomId);
+    const newIds = ids.filter((id: string) => id !== roomId);
     await saveMasterRoomIds(newIds);
-    await index.deleteOne(`ROOM_DATA_${roomId}`);
+    await getIndex().deleteOne(`ROOM_DATA_${roomId}`);
 }
 
 // 4. Chat Messages
 export async function getChatMessages(roomId: string) {
-    const res = await index.fetch([`ROOM_DATA_${roomId}`]);
+    const res = await getIndex().fetch([`ROOM_DATA_${roomId}`]);
     if (res.records && res.records[`ROOM_DATA_${roomId}`] && res.records[`ROOM_DATA_${roomId}`].metadata) {
         try {
             return JSON.parse(res.records[`ROOM_DATA_${roomId}`].metadata.chatLog as string || '[]');
@@ -102,7 +118,7 @@ export async function getChatMessages(roomId: string) {
 }
 
 export async function upsertChatMessage(roomId: string, message: ChatMessage) {
-    const res = await index.fetch([`ROOM_DATA_${roomId}`]);
+    const res = await getIndex().fetch([`ROOM_DATA_${roomId}`]);
     if (res.records && res.records[`ROOM_DATA_${roomId}`] && res.records[`ROOM_DATA_${roomId}`].metadata) {
         const meta = res.records[`ROOM_DATA_${roomId}`].metadata;
         const logs = JSON.parse(meta.chatLog as string || '[]');
@@ -114,7 +130,7 @@ export async function upsertChatMessage(roomId: string, message: ChatMessage) {
         // Pinecone Metadata 40KB 제한을 피하기 위해 최신 150개 메시지만 유지
         const safeLogs = logs.slice(-150);
 
-        await index.upsert([{
+        await getIndex().upsert([{
             id: `ROOM_DATA_${roomId}`,
             values: DUMMY_VECTOR,
             metadata: {
@@ -127,7 +143,7 @@ export async function upsertChatMessage(roomId: string, message: ChatMessage) {
 
 // 5. Participants
 export async function getParticipants(roomId: string) {
-    const res = await index.fetch([`ROOM_DATA_${roomId}`]);
+    const res = await getIndex().fetch([`ROOM_DATA_${roomId}`]);
     if (res.records && res.records[`ROOM_DATA_${roomId}`] && res.records[`ROOM_DATA_${roomId}`].metadata) {
         try {
             const parts = JSON.parse(res.records[`ROOM_DATA_${roomId}`].metadata.participants as string || '[]');
@@ -139,7 +155,7 @@ export async function getParticipants(roomId: string) {
 }
 
 export async function upsertParticipant(roomId: string, user: UserProfile) {
-    const res = await index.fetch([`ROOM_DATA_${roomId}`]);
+    const res = await getIndex().fetch([`ROOM_DATA_${roomId}`]);
     if (res.records && res.records[`ROOM_DATA_${roomId}`] && res.records[`ROOM_DATA_${roomId}`].metadata) {
         const meta = res.records[`ROOM_DATA_${roomId}`].metadata;
         const parts = JSON.parse(meta.participants as string || '[]');
@@ -153,7 +169,7 @@ export async function upsertParticipant(roomId: string, user: UserProfile) {
             parts.push({ ...user, status: 'online', lastSeen: Date.now() });
         }
 
-        await index.upsert([{
+        await getIndex().upsert([{
             id: `ROOM_DATA_${roomId}`,
             values: DUMMY_VECTOR,
             metadata: {
