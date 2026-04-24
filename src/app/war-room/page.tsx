@@ -147,7 +147,25 @@ export default function WarRoomPage() {
                     }
                 }
             )
-            .subscribe();
+            .on('presence', { event: 'sync' }, () => {
+                // Presence 상태가 변경(누군가 들어오거나 나감)될 때마다 참석 리스트 갱신
+                const presenceState = channel.presenceState();
+                const activeUsers: UserProfile[] = [];
+                for (const key in presenceState) {
+                    presenceState[key].forEach((p: any) => {
+                        if (p.user) {
+                            activeUsers.push(p.user);
+                        }
+                    });
+                }
+                setServerParticipants(activeUsers);
+            })
+            .subscribe(async (status) => {
+                if (status === 'SUBSCRIBED' && currentUser && activeRoomId) {
+                    // 채널 구독 성공 시 내 정보를 트래킹(방 입장 알림)
+                    await channel.track({ user: currentUser });
+                }
+            });
 
         return () => {
             supabase.removeChannel(channel);
@@ -249,13 +267,6 @@ export default function WarRoomPage() {
 
     const handleLeaveRoom = async () => {
         if (!activeRoomId || !currentUser) return;
-
-        try {
-            await fetch(`/api/war-room/participants?roomId=${activeRoomId}&userId=${currentUser.id}`, {
-                method: 'DELETE'
-            });
-        } catch (e) { console.error("Leave Sync Error", e); }
-
         setActiveRoomId(null);
     };
 
