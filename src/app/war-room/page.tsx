@@ -75,6 +75,18 @@ export default function WarRoomPage() {
                                 ? { ...existingLocal, title: sr.title, level: sr.level, description: sr.description } 
                                 : { ...sr, chatLog: [], participants: [] };
                         });
+
+                        // 로컬에서 방금 만들었는데 아직 서버 응답이 반영 안 된 5초 이내 방은 보존 (Race condition 방지)
+                        const now = Date.now();
+                        currentWarRooms.forEach(lr => {
+                            if (!updatedWarRooms.some(ur => ur.id === lr.id)) {
+                                const roomTime = parseInt(lr.id, 10);
+                                if (!isNaN(roomTime) && (now - roomTime < 5000)) {
+                                    updatedWarRooms.push(lr);
+                                }
+                            }
+                        });
+
                         useStore.getState().setWarRooms(updatedWarRooms);
                     }
                 }
