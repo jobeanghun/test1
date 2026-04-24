@@ -325,7 +325,7 @@ export default function LogAnalyzePage() {
       </div>
 
       {/* Result Section */}
-      <div className="flex-1 flex flex-col pt-[72px]">
+      <div className="flex-1 flex flex-col xl:pt-[72px]">
         {isAnalyzing ? (
           <div className="bg-slate-800/50 border border-slate-700 border-dashed rounded-xl p-5 flex flex-col items-center justify-center flex-1 text-emerald-500/50 transition-all">
             <div className="w-16 h-16 rounded-full border-t-4 border-b-4 border-emerald-500 animate-spin mb-4" />

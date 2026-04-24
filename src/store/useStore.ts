@@ -68,6 +68,8 @@ interface AppState {
     // UI State
     sidebarOpen: boolean;
     setSidebarOpen: (open: boolean) => void;
+    mobileSidebarOpen: boolean;
+    setMobileSidebarOpen: (open: boolean) => void;
 
     // Actions
     login: (email: string, password?: string) => void;
@@ -120,6 +122,8 @@ export const useStore = create<AppState>()(
 
             sidebarOpen: true,
             setSidebarOpen: (open) => set({ sidebarOpen: open }),
+            mobileSidebarOpen: false,
+            setMobileSidebarOpen: (open) => set({ mobileSidebarOpen: open }),
 
             login: (email) => set((state) => {
                 const user = state.users.find(u => u.email === email || u.id === email) || null;

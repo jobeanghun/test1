@@ -55,6 +55,13 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                 <main className="w-full h-full bg-slate-900 overflow-auto">{children}</main>
             ) : (
                 <>
+                    {/* 모바일 뒷배경 오버레이 */}
+                    {useStore((state) => state.mobileSidebarOpen) && (
+                        <div 
+                            className="fixed inset-0 bg-black/50 z-40 md:hidden transition-opacity" 
+                            onClick={() => useStore.getState().setMobileSidebarOpen(false)}
+                        />
+                    )}
                     <Sidebar />
                     <div className="flex-1 flex flex-col h-full overflow-hidden">
                         <Header />

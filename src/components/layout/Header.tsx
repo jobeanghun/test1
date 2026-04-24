@@ -1,6 +1,6 @@
 "use client";
 
-import { Bell, LogOut, Settings, User, FileText, Activity } from "lucide-react";
+import { Bell, LogOut, Settings, User, FileText, Activity, Menu } from "lucide-react";
 import { useState } from "react";
 import { useStore } from "@/store/useStore";
 import { useRouter } from "next/navigation";
@@ -42,12 +42,19 @@ export default function Header() {
     const hasNotifications = notifications.length > 0;
 
     return (
-        <header className="h-16 bg-slate-800 border-b border-slate-700 flex items-center justify-between px-6 sticky top-0 z-30 shrink-0">
-            <div className="flex items-center gap-4">
-                <h2 className="text-lg font-semibold text-slate-200">인프라 현황</h2>
-                <div className="flex items-center gap-2 text-sm text-slate-400">
+        <header className="h-16 bg-slate-800 border-b border-slate-700 flex items-center justify-between px-4 md:px-6 sticky top-0 z-30 shrink-0">
+            <div className="flex items-center gap-3 md:gap-4">
+                <button 
+                    onClick={() => useStore.getState().setMobileSidebarOpen(true)}
+                    className="p-1 text-slate-400 hover:text-white md:hidden"
+                >
+                    <Menu className="w-6 h-6" />
+                </button>
+                <h2 className="text-base md:text-lg font-semibold text-slate-200 hidden sm:block">인프라 현황</h2>
+                <div className="flex items-center gap-1.5 md:gap-2 text-xs md:text-sm text-slate-400">
                     <span className="flex h-2 w-2 rounded-full bg-emerald-500"></span>
-                    모든 시스템 정상 가동 중
+                    <span className="hidden sm:inline">모든 시스템 정상 가동 중</span>
+                    <span className="sm:hidden">정상 가동</span>
                 </div>
             </div>
 
