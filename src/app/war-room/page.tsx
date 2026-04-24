@@ -267,35 +267,54 @@ export default function WarRoomPage() {
             if (textToSend.includes("@AI") || textToSend.includes("@ai")) {
                 const aiQuery = textToSend.replace(/@AI|@ai/g, '').trim();
                 
-                // AI 타이핑 인디케이터용 임시 메시지 (옵션이지만 여기선 생략하고 바로 fetch)
-                const chatopsRes = await fetch('/api/chatops', {
+                // AI 응답 대기 상태 임시 메시지 추가
+                const tempId = Date.now().toString();
+                addMessageToRoom(activeRoomId, {
+                    id: tempId,
+                    sender: "AI 요원 🤖",
+                    text: "🤔 질문을 분석하고 있습니다...",
+                    time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                    userId: "system-ai",
+                    color: "#8B5CF6"
+                });
+
+                // 비동기로 호출
+                fetch('/api/chatops', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ query: aiQuery })
-                });
-                
-                if (chatopsRes.ok) {
+                }).then(async (chatopsRes) => {
                     const data = await chatopsRes.json();
-                    if (data.reply) {
-                        const aiReplyMessage: ChatMessage = {
-                            id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
-                            sender: "AI 요원 🤖",
-                            text: data.reply,
-                            time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-                            userId: "system-ai",
-                            color: "#8B5CF6" // 보라색 AI
-                        };
-                        
-                        // 로컬 상태 추가
-                        addMessageToRoom(activeRoomId, aiReplyMessage);
-                        // DB 동기화
-                        await fetch('/api/war-room/messages', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ roomId: activeRoomId, message: aiReplyMessage })
-                        });
-                    }
-                }
+                    let replyText = data.reply || data.error || "응답을 생성하지 못했습니다.";
+                    
+                    const aiReplyMessage: ChatMessage = {
+                        id: Date.now().toString(),
+                        sender: "AI 요원 🤖",
+                        text: replyText,
+                        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                        userId: "system-ai",
+                        color: "#8B5CF6"
+                    };
+                    
+                    // 로컬 상태에 다시 추가 (실제로는 tempId를 교체해야 하지만, 편의상 추가)
+                    addMessageToRoom(activeRoomId, aiReplyMessage);
+                    // DB 동기화
+                    fetch('/api/war-room/messages', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ roomId: activeRoomId, message: aiReplyMessage })
+                    });
+                }).catch(err => {
+                    console.error("ChatOps Error", err);
+                    addMessageToRoom(activeRoomId, {
+                        id: Date.now().toString(),
+                        sender: "AI 요원 🤖",
+                        text: `⚠️ 오류 발생: ${err.message}`,
+                        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                        userId: "system-ai",
+                        color: "#EF4444"
+                    });
+                });
             }
         } catch (e) { console.error("Send Sync Error", e); }
     };
