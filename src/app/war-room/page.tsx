@@ -262,6 +262,41 @@ export default function WarRoomPage() {
                 body: JSON.stringify({ roomId: activeRoomId, message: newMessage }),
                 cache: 'no-store'
             });
+
+            // 3. ChatOps 연동 (메시지에 @AI 가 포함되어 있는 경우)
+            if (textToSend.includes("@AI") || textToSend.includes("@ai")) {
+                const aiQuery = textToSend.replace(/@AI|@ai/g, '').trim();
+                
+                // AI 타이핑 인디케이터용 임시 메시지 (옵션이지만 여기선 생략하고 바로 fetch)
+                const chatopsRes = await fetch('/api/chatops', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ query: aiQuery })
+                });
+                
+                if (chatopsRes.ok) {
+                    const data = await chatopsRes.json();
+                    if (data.reply) {
+                        const aiReplyMessage: ChatMessage = {
+                            id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
+                            sender: "AI 요원 🤖",
+                            text: data.reply,
+                            time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                            userId: "system-ai",
+                            color: "#8B5CF6" // 보라색 AI
+                        };
+                        
+                        // 로컬 상태 추가
+                        addMessageToRoom(activeRoomId, aiReplyMessage);
+                        // DB 동기화
+                        await fetch('/api/war-room/messages', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ roomId: activeRoomId, message: aiReplyMessage })
+                        });
+                    }
+                }
+            }
         } catch (e) { console.error("Send Sync Error", e); }
     };
 
