@@ -1,128 +1,168 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import fs from 'fs';
-import path from 'path';
+import { Pinecone } from '@pinecone-database/pinecone';
 import { ChatMessage, UserProfile } from "@/store/useStore";
 
-export interface ExternalState {
-    messages: Record<string, ChatMessage[]>;
-    participants: Record<string, UserProfile[]>;
-    rooms: Record<string, any>;
-    users: Record<string, UserProfile>;
-}
+const pc = new Pinecone({ apiKey: process.env.PINECONE_API_KEY || '' });
+const index = pc.Index('aiops-rag-kb');
+const DUMMY_VECTOR = new Array(1536).fill(0);
 
-// Vercel 환경에서는 /tmp 디렉토리만 쓰기 가능, 로컬에서는 프로젝트 루트 사용
-const isVercel = process.env.VERCEL === '1' || process.env.VERCEL_ENV !== undefined;
-const DB_PATH = isVercel 
-    ? path.join('/tmp', 'war-room-db.json') 
-    : path.join(process.cwd(), '.war-room-db.json');
+const MASTER_ID = 'AIOPS_MASTER_ROOM_LIST';
 
-// 기본 초기값
-const defaultState: ExternalState = {
-    messages: {},
-    participants: {},
-    rooms: {},
-    users: {}
-};
-
-// 파일에서 데이터 읽기
-function readDB(): ExternalState {
-    try {
-        if (fs.existsSync(DB_PATH)) {
-            const data = fs.readFileSync(DB_PATH, 'utf-8');
-            return JSON.parse(data);
-        }
-    } catch (e) {
-        console.error("DB Read Error", e);
+// Helper: 마스터 방 목록 가져오기 (즉각적 조회)
+async function getMasterRoomIds(): Promise<string[]> {
+    const res = await index.fetch([MASTER_ID]);
+    if (res.records && res.records[MASTER_ID] && res.records[MASTER_ID].metadata) {
+        try {
+            return JSON.parse(res.records[MASTER_ID].metadata.roomIds as string || '[]');
+        } catch(e) {}
     }
-    return defaultState;
+    return [];
 }
 
-// 파일에 데이터 쓰기
-function writeDB(data: ExternalState) {
-    try {
-        fs.writeFileSync(DB_PATH, JSON.stringify(data, null, 2), 'utf-8');
-    } catch (e) {
-        console.error("DB Write Error", e);
-    }
+// Helper: 마스터 방 목록 저장 (즉각적 반영)
+async function saveMasterRoomIds(ids: string[]) {
+    await index.upsert([{
+        id: MASTER_ID,
+        values: DUMMY_VECTOR,
+        metadata: { roomIds: JSON.stringify(ids) }
+    }]);
 }
 
-// 1. War Room Metadata
-export async function upsertRoom(room: any) {
-    const db = readDB();
-    db.rooms[room.id] = room;
-    writeDB(db);
-}
-
+// 1. Get All Rooms
 export async function getRooms() {
-    const db = readDB();
-    return Object.values(db.rooms);
-}
-
-export async function deleteRoom(roomId: string) {
-    const db = readDB();
-    delete db.rooms[roomId];
-    delete db.messages[roomId];
-    delete db.participants[roomId];
-    writeDB(db);
-}
-
-// 2. Chat Messages
-export async function upsertChatMessage(roomId: string, message: ChatMessage) {
-    const db = readDB();
-    if (!db.messages[roomId]) {
-        db.messages[roomId] = [];
-    }
-    const messages = db.messages[roomId];
-    const idx = messages.findIndex((m: ChatMessage) => m.id === message.id);
-    if (idx >= 0) {
-        messages[idx] = message;
-    } else {
-        messages.push(message);
-    }
-    writeDB(db);
-}
-
-export async function getChatMessages(roomId: string) {
-    const db = readDB();
-    const messages = db.messages[roomId] || [];
-    return [...messages].sort((a, b) => (a.id || '').localeCompare(b.id || ''));
-}
-
-// 3. Participants
-export async function upsertParticipant(roomId: string, user: UserProfile) {
-    const db = readDB();
-    if (!db.participants[roomId]) {
-        db.participants[roomId] = [];
-    }
-    const list = db.participants[roomId];
-    const existing = list.find((u: UserProfile) => u.id === user.id);
+    const ids = await getMasterRoomIds();
+    if (ids.length === 0) return [];
     
-    if (existing) {
-        Object.assign(existing, user);
-        existing.status = 'online';
-        (existing as any).lastSeen = Date.now();
-    } else {
-        list.push({ ...user, status: 'online', lastSeen: Date.now() } as any);
+    const fetchIds = ids.map(id => `ROOM_DATA_${id}`);
+    const res = await index.fetch(fetchIds);
+    
+    const rooms = [];
+    for (const id of fetchIds) {
+        if (res.records && res.records[id] && res.records[id].metadata) {
+            try {
+                const roomInfo = JSON.parse(res.records[id].metadata.roomInfo as string || '{}');
+                if (roomInfo.id) rooms.push(roomInfo);
+            } catch(e) {}
+        }
     }
-    writeDB(db);
+    return rooms;
 }
 
+// 2. Upsert Room Metadata
+export async function upsertRoom(room: any) {
+    const ids = await getMasterRoomIds();
+    if (!ids.includes(room.id)) {
+        ids.push(room.id);
+        await saveMasterRoomIds(ids);
+    }
+    
+    // 기존 채팅/참여자 데이터 보존
+    const res = await index.fetch([`ROOM_DATA_${room.id}`]);
+    let chatLog = "[]";
+    let participants = "[]";
+    if (res.records && res.records[`ROOM_DATA_${room.id}`] && res.records[`ROOM_DATA_${room.id}`].metadata) {
+        chatLog = res.records[`ROOM_DATA_${room.id}`].metadata.chatLog as string || "[]";
+        participants = res.records[`ROOM_DATA_${room.id}`].metadata.participants as string || "[]";
+    }
+
+    await index.upsert([{
+        id: `ROOM_DATA_${room.id}`,
+        values: DUMMY_VECTOR,
+        metadata: {
+            roomInfo: JSON.stringify({
+                id: room.id,
+                title: room.title,
+                level: room.level,
+                description: room.description,
+                time: room.time
+            }),
+            chatLog,
+            participants
+        }
+    }]);
+}
+
+// 3. Delete Room
+export async function deleteRoom(roomId: string) {
+    const ids = await getMasterRoomIds();
+    const newIds = ids.filter(id => id !== roomId);
+    await saveMasterRoomIds(newIds);
+    await index.deleteOne(`ROOM_DATA_${roomId}`);
+}
+
+// 4. Chat Messages
+export async function getChatMessages(roomId: string) {
+    const res = await index.fetch([`ROOM_DATA_${roomId}`]);
+    if (res.records && res.records[`ROOM_DATA_${roomId}`] && res.records[`ROOM_DATA_${roomId}`].metadata) {
+        try {
+            return JSON.parse(res.records[`ROOM_DATA_${roomId}`].metadata.chatLog as string || '[]');
+        } catch(e) {}
+    }
+    return [];
+}
+
+export async function upsertChatMessage(roomId: string, message: ChatMessage) {
+    const res = await index.fetch([`ROOM_DATA_${roomId}`]);
+    if (res.records && res.records[`ROOM_DATA_${roomId}`] && res.records[`ROOM_DATA_${roomId}`].metadata) {
+        const meta = res.records[`ROOM_DATA_${roomId}`].metadata;
+        const logs = JSON.parse(meta.chatLog as string || '[]');
+        
+        const idx = logs.findIndex((m: any) => m.id === message.id);
+        if (idx >= 0) logs[idx] = message;
+        else logs.push(message);
+
+        // Pinecone Metadata 40KB 제한을 피하기 위해 최신 150개 메시지만 유지
+        const safeLogs = logs.slice(-150);
+
+        await index.upsert([{
+            id: `ROOM_DATA_${roomId}`,
+            values: DUMMY_VECTOR,
+            metadata: {
+                ...meta,
+                chatLog: JSON.stringify(safeLogs)
+            }
+        }]);
+    }
+}
+
+// 5. Participants
 export async function getParticipants(roomId: string) {
-    const db = readDB();
-    const list = db.participants[roomId] || [];
-    const now = Date.now();
-    // 60초 이내 활동한 사용자만 반환
-    return list.filter((u: any) => now - (u.lastSeen || 0) < 60000);
+    const res = await index.fetch([`ROOM_DATA_${roomId}`]);
+    if (res.records && res.records[`ROOM_DATA_${roomId}`] && res.records[`ROOM_DATA_${roomId}`].metadata) {
+        try {
+            const parts = JSON.parse(res.records[`ROOM_DATA_${roomId}`].metadata.participants as string || '[]');
+            const now = Date.now();
+            return parts.filter((u: any) => now - (u.lastSeen || 0) < 60000);
+        } catch(e) {}
+    }
+    return [];
 }
 
-// 4. Users (Pool)
-export async function upsertUser(user: UserProfile) {
-    const db = readDB();
-    db.users[user.id] = user;
-    writeDB(db);
+export async function upsertParticipant(roomId: string, user: UserProfile) {
+    const res = await index.fetch([`ROOM_DATA_${roomId}`]);
+    if (res.records && res.records[`ROOM_DATA_${roomId}`] && res.records[`ROOM_DATA_${roomId}`].metadata) {
+        const meta = res.records[`ROOM_DATA_${roomId}`].metadata;
+        const parts = JSON.parse(meta.participants as string || '[]');
+        
+        const existing = parts.find((p: any) => p.id === user.id);
+        if (existing) {
+            Object.assign(existing, user);
+            existing.status = 'online';
+            existing.lastSeen = Date.now();
+        } else {
+            parts.push({ ...user, status: 'online', lastSeen: Date.now() });
+        }
+
+        await index.upsert([{
+            id: `ROOM_DATA_${roomId}`,
+            values: DUMMY_VECTOR,
+            metadata: {
+                ...meta,
+                participants: JSON.stringify(parts)
+            }
+        }]);
+    }
 }
 
-export async function getUsers() {
-    const db = readDB();
-    return Object.values(db.users);
-}
+export async function upsertUser(user: UserProfile) {}
+export async function getUsers() { return []; }
