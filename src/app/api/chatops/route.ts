@@ -38,7 +38,7 @@ export async function POST(req: NextRequest) {
         }
 
         const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-        const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+        const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" }); // 쿼터 제한을 우회하고 정상 테스트된 모델 적용
 
         const prompt = `
 당신은 IT 인프라 통합 관제 시스템(AIOps)의 AI 어시스턴트 봇입니다.
