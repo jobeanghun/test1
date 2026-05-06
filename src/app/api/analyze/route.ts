@@ -27,7 +27,7 @@ export async function POST(req: Request) {
 
         // Use Gemini model (Flash is fast and suitable for log analysis)
         const model = genAI.getGenerativeModel({
-            model: "gemini-1.5-flash", // 2.0-flash 보다 Rate Limit이 안정적인 1.5-flash로 다운그레이드 테스트
+            model: "gemini-pro", // 1.5-flash에서 404 에러가 발생하여, 가장 범용적이고 안정적인 gemini-pro(1.0) 모델로 변경
             generationConfig: {
                 maxOutputTokens: 4096, // 출력 토큰 수도 절반으로 줄여 제한 방지
                 temperature: 0.4
